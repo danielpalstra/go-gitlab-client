@@ -54,6 +54,12 @@ type Project struct {
 	HttpRepoUrl          string     `json:"http_url_to_repo"`
 }
 
+// A gitlab project
+type ProjectRequest struct {
+	Name      string `json:"name"`
+	Namespace int    `json:"namespace_id,omitempty"`
+}
+
 /*
 Get a list of projects owned by the authenticated user.
 */
@@ -122,4 +128,40 @@ func (g *Gitlab) ProjectMembers(id string) ([]*Member, error) {
 	}
 
 	return members, err
+}
+
+/*
+Add new project .
+
+    POST /projects
+
+Parameters:
+
+    CreateProject	Object containing the ID and NAMESPACE/PROJECT_NAME of a project
+
+*/
+func (g *Gitlab) AddProject(req *ProjectRequest) (project *Project, err error) {
+
+	params := map[string]string{
+		":id": "1234",
+	}
+	u := g.ResourceUrl(projects_url, params)
+
+	encodedRequest, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	data, err := g.buildAndExecRequest("POST", u, encodedRequest)
+	if err != nil {
+		return
+	}
+
+	project = new(Project)
+	err = json.Unmarshal(data, project)
+	if err != nil {
+		panic(err)
+	}
+	return
+
 }
