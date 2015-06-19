@@ -76,6 +76,9 @@ func (g *Gitlab) buildAndExecRequest(method, url string, body []byte) ([]byte, e
 	if body != nil {
 		reader := bytes.NewReader(body)
 		req, err = http.NewRequest(method, url, reader)
+		// TODO is nodig om content uit te sturen.
+		req.Header.Set("Content-Type", "application/json")
+
 	} else {
 		req, err = http.NewRequest(method, url, nil)
 	}

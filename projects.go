@@ -5,13 +5,14 @@ import (
 )
 
 const (
-	projects_url         = "/projects"                         // Get a list of projects owned by the authenticated user
-	projects_search_url  = "/projects/search/:query"           // Search for projects by name
-	project_url          = "/projects/:id"                     // Get a specific project, identified by project ID or NAME
-	project_url_events   = "/projects/:id/events"              // Get project events
-	project_url_branches = "/projects/:id/repository/branches" // Lists all branches of a project
-	project_url_members  = "/projects/:id/members"             // List project team members
-	project_url_member   = "/projects/:id/members/:user_id"    // Get project team member
+	projects_url                    = "/projects"                                         // Get a list of projects owned by the authenticated user
+	projects_search_url             = "/projects/search/:query"                           // Search for projects by name
+	project_url                     = "/projects/:id"                                     // Get a specific project, identified by project ID or NAME
+	project_url_events              = "/projects/:id/events"                              // Get project events
+	project_url_branches            = "/projects/:id/repository/branches"                 // Lists all branches of a project
+	project_url_members             = "/projects/:id/members"                             // List project team members
+	project_url_member              = "/projects/:id/members/:user_id"                    // Get project team member
+	project_url_branches_protection = "/projects/:id/repository/branches/:branch/protect" // Branch protection URL
 )
 
 type Member struct {
@@ -53,6 +54,23 @@ type Project struct {
 	SshRepoUrl           string     `json:"ssh_url_to_repo"`
 	HttpRepoUrl          string     `json:"http_url_to_repo"`
 }
+
+// A gitlab project
+type ProjectRequest struct {
+	Name      string `json:"name"`
+	Namespace int    `json:"namespace_id,omitempty"`
+}
+
+// A gitlab ProjectBranchRequest request
+type ProjectBranchRequest struct {
+	BranchName string `json:"branch_name"`
+	Ref        string `json:"ref"`
+}
+
+// type Commit struct {
+// 	Name      string `json:"name,omitempty"`
+// 	Protected string `json:"protected,omitempty"`
+// }
 
 /*
 Get a list of projects owned by the authenticated user.
@@ -122,4 +140,101 @@ func (g *Gitlab) ProjectMembers(id string) ([]*Member, error) {
 	}
 
 	return members, err
+}
+
+/*
+Add new project .
+
+    POST /projects
+
+Parameters:
+
+    CreateProject	Object containing the ID and NAMESPACE/PROJECT_NAME of a project
+
+*/
+func (g *Gitlab) AddProject(req *ProjectRequest) (project *Project, err error) {
+
+	params := map[string]string{
+		":id": "1234",
+	}
+	u := g.ResourceUrl(projects_url, params)
+
+	encodedRequest, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	data, err := g.buildAndExecRequest("POST", u, encodedRequest)
+	if err != nil {
+		return
+	}
+
+	project = new(Project)
+	err = json.Unmarshal(data, project)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+/*
+Create new branch in project .
+
+    POST /projects/:id/repository/branches
+
+Parameters:
+
+    CreateBranch	Object containing the ID, branch_name and ref of a project
+    {"branch_name":"production","ref":"master"}
+
+*/
+func (g *Gitlab) CreateBranchForProject(id string, req *ProjectBranchRequest) (commit *Commit, err error) {
+
+	params := map[string]string{
+		":id": id,
+	}
+	u := g.ResourceUrl(project_url_branches, params)
+
+	encodedRequest, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	data, err := g.buildAndExecRequest("POST", u, encodedRequest)
+	if err != nil {
+		return
+	}
+
+	commit = new(Commit)
+	err = json.Unmarshal(data, commit)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+/*
+Protect new branch in project .
+
+    PUT /projects/:id/repository/branches/:branch/protect
+
+Parameters:
+
+    ID		Object containing the ID of the project
+    branch	Name of the branch to protect
+
+*/
+func (g *Gitlab) ProtectBranch(id string, branch string) (commit *Commit, err error) {
+
+	url, opaque := g.ResourceUrlRaw(project_url_branches_protection, map[string]string{
+		":id":     id,
+		":branch": branch,
+	})
+
+	contents, err := g.buildAndExecRequestRaw("PUT", url, opaque, nil)
+	if err == nil {
+		err = json.Unmarshal(contents, &commit)
+	}
+
+	return
 }
