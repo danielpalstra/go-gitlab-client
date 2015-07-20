@@ -238,3 +238,26 @@ func (g *Gitlab) ProtectBranch(id string, branch string) (commit *Commit, err er
 
 	return
 }
+
+/*
+Remove project.
+
+    DELETE /projects/:id
+
+Parameters:
+
+    id      The ID or NAMESPACE/PROJECT_NAME of a project
+
+*/
+func (g *Gitlab) RemoveProject(id string) error {
+
+	url, opaque := g.ResourceUrlRaw(project_url, map[string]string{
+		":id":      id,
+	})
+
+	var err error
+
+	_, err = g.buildAndExecRequestRaw("DELETE", url, opaque, nil)
+
+	return err
+}
